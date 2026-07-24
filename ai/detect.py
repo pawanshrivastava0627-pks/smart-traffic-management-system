@@ -5,6 +5,7 @@ from counter import VehicleCounter
 # Load YOLO model
 model = YOLO("yolov8n.pt")
 
+# Initialize counter
 counter = VehicleCounter()
 
 # Load video
@@ -17,7 +18,6 @@ if not cap.isOpened():
     exit()
 
 print("Video loaded successfully!")
-frame_count = 0
 
 while True:
     ret, frame = cap.read()
@@ -25,44 +25,57 @@ while True:
     if not ret:
         break
 
+    # Vehicle Tracking
     results = model.track(
         frame,
         persist=True,
         verbose=False
     )
+
+    # Get tracking boxes
     boxes = results[0].boxes
 
+    # Count unique vehicles
     if boxes.id is not None:
-     boxes = results[0].boxes
+        track_ids = boxes.id.int().cpu().tolist()
 
-     if boxes.id is not None:
+        for box, track_id in zip(boxes.xyxy, track_ids):
 
-      track_ids = boxes.id.int().cpu().tolist()
+         x1, y1, x2, y2 = box
 
-      for track_id in track_ids:
-        counter.count_vehicle(track_id)
+         center_y = int((y1 + y2) / 2)
 
-      print("Total Vehicles:", counter.count)
+         counter.should_count(track_id, center_y)
 
+    # Draw detections
     annotated_frame = results[0].plot()
 
-    cv2.imshow("Traffic Video", annotated_frame)
+    # Draw virtual counting line
+    cv2.line(
+        annotated_frame,
+        (0, 400),
+        (1280, 400),
+        (0, 255, 0),
+        3
+    )
 
+    # Display total vehicle count
+    cv2.putText(
+        annotated_frame,
+        f"Total Vehicles: {counter.count}",
+        (20, 50),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 0, 255),
+        2
+    )
+
+    # Show output
+    cv2.imshow("Smart Traffic Management System", annotated_frame)
+
+    # Press Q to quit
     if cv2.waitKey(30) & 0xFF == ord("q"):
         break
 
 cap.release()
 cv2.destroyAllWindows()
-
-class VehicleCounter:
-
-    def __init__(self):
-        self.count = 0
-        self.counted_ids = set()
-
-    def count_vehicle(self, track_id):
-        if track_id not in self.counted_ids:
-            self.count += 1
-            self.counted_ids.add(track_id)
-
-        return self.count
