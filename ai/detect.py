@@ -1,8 +1,11 @@
 from ultralytics import YOLO
 import cv2
+from counter import VehicleCounter
 
 # Load YOLO model
 model = YOLO("yolov8n.pt")
+
+counter = VehicleCounter()
 
 # Load video
 video_path = "input/traffic.mp4"
@@ -27,6 +30,19 @@ while True:
         persist=True,
         verbose=False
     )
+    boxes = results[0].boxes
+
+    if boxes.id is not None:
+     boxes = results[0].boxes
+
+     if boxes.id is not None:
+
+      track_ids = boxes.id.int().cpu().tolist()
+
+      for track_id in track_ids:
+        counter.count_vehicle(track_id)
+
+      print("Total Vehicles:", counter.count)
 
     annotated_frame = results[0].plot()
 
@@ -37,3 +53,16 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
+
+class VehicleCounter:
+
+    def __init__(self):
+        self.count = 0
+        self.counted_ids = set()
+
+    def count_vehicle(self, track_id):
+        if track_id not in self.counted_ids:
+            self.count += 1
+            self.counted_ids.add(track_id)
+
+        return self.count
