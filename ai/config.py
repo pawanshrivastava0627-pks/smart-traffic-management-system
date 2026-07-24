@@ -1,0 +1,17 @@
+VIDEO_PATH = "input/traffic.mp4"
+
+MODEL_NAME = "yolov8n.pt"
+
+LINE_Y = 400
+
+LINE_COLOR = (0, 255, 0)
+
+LINE_THICKNESS = 3
+
+TEXT_POSITION = (20, 50)
+
+TEXT_COLOR = (0, 0, 255)
+
+TEXT_SCALE = 1
+
+TEXT_THICKNESS = 2

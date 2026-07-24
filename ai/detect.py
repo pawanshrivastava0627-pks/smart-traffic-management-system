@@ -1,81 +1,77 @@
 from ultralytics import YOLO
 import cv2
+
+from config import VIDEO_PATH, MODEL_NAME
 from counter import VehicleCounter
+from visualizer import draw_counting_line, draw_vehicle_count
 
-# Load YOLO model
-model = YOLO("yolov8n.pt")
 
-# Initialize counter
-counter = VehicleCounter()
+def main():
 
-# Load video
-video_path = "input/traffic.mp4"
-cap = cv2.VideoCapture(video_path)
+    # Load YOLO model
+    model = YOLO(MODEL_NAME)
 
-# Check if video opened successfully
-if not cap.isOpened():
-    print("Error: Unable to open video.")
-    exit()
+    # Initialize Counter
+    counter = VehicleCounter()
 
-print("Video loaded successfully!")
+    # Open Video
+    cap = cv2.VideoCapture(VIDEO_PATH)
 
-while True:
-    ret, frame = cap.read()
+    if not cap.isOpened():
+        print("Error: Unable to open video.")
+        return
 
-    if not ret:
-        break
+    print("Video loaded successfully!")
 
-    # Vehicle Tracking
-    results = model.track(
-        frame,
-        persist=True,
-        verbose=False
-    )
+    while True:
 
-    # Get tracking boxes
-    boxes = results[0].boxes
+        ret, frame = cap.read()
 
-    # Count unique vehicles
-    if boxes.id is not None:
-        track_ids = boxes.id.int().cpu().tolist()
+        if not ret:
+            break
 
-        for box, track_id in zip(boxes.xyxy, track_ids):
+        # Object Detection + Tracking
+        results = model.track(
+            frame,
+            persist=True,
+            verbose=False
+        )
 
-         x1, y1, x2, y2 = box
+        boxes = results[0].boxes
 
-         center_y = int((y1 + y2) / 2)
+        # Vehicle Counting
+        if boxes.id is not None:
 
-         counter.should_count(track_id, center_y)
+            track_ids = boxes.id.int().cpu().tolist()
 
-    # Draw detections
-    annotated_frame = results[0].plot()
+            for box, track_id in zip(boxes.xyxy, track_ids):
 
-    # Draw virtual counting line
-    cv2.line(
-        annotated_frame,
-        (0, 400),
-        (1280, 400),
-        (0, 255, 0),
-        3
-    )
+                x1, y1, x2, y2 = box
 
-    # Display total vehicle count
-    cv2.putText(
-        annotated_frame,
-        f"Total Vehicles: {counter.count}",
-        (20, 50),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        1,
-        (0, 0, 255),
-        2
-    )
+                center_y = int((y1 + y2) / 2)
 
-    # Show output
-    cv2.imshow("Smart Traffic Management System", annotated_frame)
+                counter.should_count(track_id, center_y)
 
-    # Press Q to quit
-    if cv2.waitKey(30) & 0xFF == ord("q"):
-        break
+        # Draw Detection Boxes
+        annotated_frame = results[0].plot()
 
-cap.release()
-cv2.destroyAllWindows()
+        # Draw UI
+        draw_counting_line(annotated_frame)
+        draw_vehicle_count(annotated_frame, counter.count)
+
+        # Display Window
+        cv2.imshow(
+            "Smart Traffic Management System",
+            annotated_frame
+        )
+
+        # Exit
+        if cv2.waitKey(30) & 0xFF == ord("q"):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    main()
