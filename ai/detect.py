@@ -1,14 +1,20 @@
 from ultralytics import YOLO
 import cv2
 
-from config import VIDEO_PATH, MODEL_NAME
+from config import (
+    VIDEO_PATH,
+    MODEL_NAME,
+    VEHICLE_CLASSES,
+    CLASS_NAMES
+)
+
 from counter import VehicleCounter
 from visualizer import draw_counting_line, draw_vehicle_count
 
 
 def main():
 
-    # Load YOLO model
+    # Load YOLO Model
     model = YOLO(MODEL_NAME)
 
     # Initialize Counter
@@ -39,12 +45,22 @@ def main():
 
         boxes = results[0].boxes
 
-        # Vehicle Counting
+        annotated_frame = results[0].plot()
+
         if boxes.id is not None:
 
             track_ids = boxes.id.int().cpu().tolist()
+            class_ids = boxes.cls.int().cpu().tolist()
 
-            for box, track_id in zip(boxes.xyxy, track_ids):
+            for box, track_id, class_id in zip(
+                boxes.xyxy,
+                track_ids,
+                class_ids
+            ):
+
+                # Ignore non-vehicle objects
+                if class_id not in VEHICLE_CLASSES:
+                    continue
 
                 x1, y1, x2, y2 = box
 
@@ -52,20 +68,21 @@ def main():
 
                 counter.should_count(track_id, center_y)
 
-        # Draw Detection Boxes
-        annotated_frame = results[0].plot()
+                # Debug (temporary)
+                print(
+                    f"{CLASS_NAMES[class_id]} | "
+                    f"Track ID: {track_id}"
+                )
 
         # Draw UI
         draw_counting_line(annotated_frame)
         draw_vehicle_count(annotated_frame, counter.count)
 
-        # Display Window
         cv2.imshow(
             "Smart Traffic Management System",
             annotated_frame
         )
 
-        # Exit
         if cv2.waitKey(30) & 0xFF == ord("q"):
             break
 

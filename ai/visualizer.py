@@ -1,6 +1,14 @@
 import cv2
 
-from config import *
+from config import (
+    LINE_Y,
+    LINE_COLOR,
+    LINE_THICKNESS,
+    TEXT_POSITION,
+    TEXT_COLOR,
+    TEXT_SCALE,
+    TEXT_THICKNESS
+)
 
 
 def draw_counting_line(frame):
